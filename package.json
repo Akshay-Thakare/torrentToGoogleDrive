@@ -1,0 +1,19 @@
+{
+  "name": "ttgd",
+  "version": "1.0.0",
+  "description": "no comments. if u know how to use it then use it.",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Akshay-Thakare/torrentToGoogleDrive.git"
+  },
+  "author": "Akshay Thakare",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Akshay-Thakare/torrentToGoogleDrive/issues"
+  },
+  "homepage": "https://github.com/Akshay-Thakare/torrentToGoogleDrive#readme"
+}
