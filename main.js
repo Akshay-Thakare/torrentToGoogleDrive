@@ -1,7 +1,7 @@
+'use strict';
 
-
-Transmission = require('transmission');
-transmission = new Transmission({
+var Transmission = require('transmission');
+var transmission = new Transmission({
 	port: 9091,
 	host: '192.168.1.69',
 	username: 'rambo',
@@ -28,8 +28,8 @@ function deleteTorrent(id){
 	});
 }
 
-function addTorrent(){
-	transmission.addUrl('magnet:?xt=urn:btih:7EC0EC7275D8F78884B6CCEC7D8D0B0063D8FCC4&dn=ride+along+2+2016+hdrip+hc+x264+aac+viznu+p2pdl&tr=udp%3A%2F%2Ftracker.publicbt.com%3A80%2Fannounce&tr=udp%3A%2F%2Fglotorrents.pw%3A6969%2Fannounce', {
+function addTorrent(url){
+	transmission.addUrl(url, {
 	    "download-dir" : "~/transmission/torrents"
 	}, function(err, result) {
 	    if (err) {
@@ -76,19 +76,45 @@ function stopTorrent(id){
 	transmission.stop(id, function(err, result){});
 }
 
-getTorrentDetails(5);
+for(var i=0;i<10;i++){
+	getTorrentDetails(i);
+}
 
 function getTorrentDetails(id) {
     transmission.get(id, function(err, result) {
         if (err) {
             throw err;
         }
-        console.log('bt.get returned ' + result.torrents.length + ' torrents');
-        console.log(result.torrents[0]);
-//        result.torrents.forEach(function(torrent) {
-//            console.log('hashString', torrent.hashString);
-//        })
+        if(result.torrents.length > 0){
+        	// console.log(result.torrents[0]);
+        	console.log("Name = "+ result.torrents[0].name);
+        	console.log("Download Rate = "+ result.torrents[0].rateDownload/1000);
+        	console.log("Upload Rate = "+ result.torrents[0].rateUpload/1000);
+        	console.log("Completed = "+ result.torrents[0].percentDone*100);
+        	console.log("ETA = "+ result.torrents[0].eta/3600);
+        	console.log("Status = "+ getStatusType(result.torrents[0].status));
+        }
     });
+}
+
+function getStatusType(type){
+	if(type === 0){
+		return 'STOPPED';
+	} else if(type === 1){
+		return 'CHECK_WAIT';
+	} else if(type === 2){
+		return 'CHECK';
+	} else if(type === 3){
+		return 'DOWNLOAD_WAIT';
+	} else if(type === 4){
+		return 'DOWNLOAD';
+	} else if(type === 5){
+		return 'SEED_WAIT';
+	} else if(type === 6){
+		return 'SEED';
+	} else if(type === 7){
+		return 'ISOLATED';
+	}
 }
 
 function removeTorrent(id) {
@@ -97,5 +123,5 @@ function removeTorrent(id) {
             throw err;
         }
         console.log('torrent was removed');
-    })
+    });
 }
