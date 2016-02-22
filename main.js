@@ -37,7 +37,18 @@ var transmission = new Transmission({
 	password: 'qwerty'
 });
 
-// getTorrents();
+function getStats(){
+	transmission.sessionStats(function(err, result){
+		if(err){
+			console.log(err);
+		} else {
+			// TODO : If all torrents are paused then none of the transfers will be active. This is a workaround for that problem
+			if(result.activeTorrentCount === 0)
+				for(var i=1;i<=result.torrentCount;i++)
+					startTorrent(i);
+		}
+	});
+}
 
 function getTorrents(){
 	getAllActiveTorrents(function(res){
@@ -103,8 +114,8 @@ function removeTorrent(id) {
 io.sockets.on('connection', function(socket){
 
 	var timeoutId;
-
 	console.log('a user connected');
+
 	socket.on('disconnect',function(){
 		console.log('a user disconnected');
 		clearInterval(timeoutId);
@@ -115,6 +126,7 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('getTransferList', function(msg){
+		getStats();	// Init torrents - workaround
 		timeoutId = setInterval(function(){
 			getAllActiveTorrents(function(res){
 				//console.log(res);
