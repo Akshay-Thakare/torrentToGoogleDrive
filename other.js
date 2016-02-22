@@ -50,6 +50,8 @@ function startTorrent(id){
 	transmission.start(id, function(err, result){});
 }
 
+getAllActiveTorrents();
+
 function getAllActiveTorrents(){
 	transmission.active(function(err, result){
 	if (err){

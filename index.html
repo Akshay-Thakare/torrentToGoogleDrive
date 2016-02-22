@@ -66,15 +66,15 @@
 			});
 
 			function startTransfer(transferId){
-				console.log(transferId);
+				socket.emit('start',transferId);
 			}
 
 			function pauseTransfer(transferId){
-				console.log(transferId);
+				socket.emit('pause',transferId);
 			}
 
 			function deleteTransfer(transferId){
-				console.log(transferId);
+				socket.emit('delete',transferId);
 			}
 
 			$(window).load(function(){
@@ -85,23 +85,24 @@
 			socket.on('transferList', function(msg){
 
 				var data = JSON.parse(msg);
-				
-				// console.log(msg);
-
-				// check if transfer already exists
-				if ($('#'+data.id+'_panel').length){
-					updateTransfer(data.id, data.val, data.down, data.up, data.eta, data.status);
-				} else {
-					addTransfer(data.id, data.val, data.name, data.down, data.up, data.eta, data.status);
+				for (var i=0; i< data.length; i++){
+					// check if transfer already exists
+					if ($('#'+data[i].id+'_panel').length){
+						updateTransfer(data[i].id, data[i].name, data[i].val, data[i].down, data[i].up, data[i].eta, data[i].status);
+					} else {
+						addTransfer(data[i].id, data[i].val, data[i].name, data[i].down, data[i].up, data[i].eta, data[i].status);
+					}	
 				}
 			});
 
+			// TODO : add peer count
 			function addTransfer(id, val, name, down, up, eta, status){
 				$('#transferHolder').append("<div id='"+id+'_panel'+"' class=\"panel panel-default\"><div class=\"panel-heading\"><h3 id='"+id+'_name'+"' class=\"panel-title\">"+name+"</h3></div><div class=\"panel-body\"><div class=\"progress\"><div id='"+id+'_progress'+"' class=\"progress-bar progress-bar-info\" role=\"progressbar\" aria-valuenow=\"2\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"min-width: 2em; width: "+val+"%;\">"+val+"%</div></div><div><div class=\"table-responsive\"><table class=\"table\"><tr><th>Download Speed</th><th>Upload Speed</th><th>ETA</th><th>Status</th><th>Controls</th></tr><tr><td id='"+id+'_down'+"' >"+down+" kB/s</td><td id='"+id+'_up'+"'>"+up+" kB/s</td><td id='"+id+'_eta'+"'>"+eta+"</td><td id='"+id+'_status'+"'>"+status+"</td><td><div class=\"btn-group\" data='"+id+"' role=\"group\" aria-label=\"...\"><button id=\"startTransfer\" onclick=\"startTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\" style=\"color: #009688;\"></span></button><button id=\"pauseTransfer\" onclick=\"pauseTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-pause\" aria-hidden=\"true\" style=\"color: #607D8B;\"></span></button><button id=\"deleteTransfer\" onclick=\"deleteTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></div></td></tr></table></div></div></div></div>");
 			}
 
-			function updateTransfer(id, val, down, up, eta, status){
+			function updateTransfer(id, name, val, down, up, eta, status){
 				$('#'+id+'_down').text(down + " kB/s");
+				$('#'+id+'_name').text(name);
 				$('#'+id+'_up').text(up + " kB/s");
 				$('#'+id+'_eta').text(eta);
 				if(val === 100){
@@ -110,7 +111,8 @@
 					$('#'+id+'_eta').text("-");
 					$('#'+id+'_status').text("Completed");
 
-					//TODO : Stop torrent
+					deleteTransfer(id);		// On complete remove file from server
+					$('#'+id+'_panel').remove();
 
 				} else {
 					$('#'+id+'_status').text(status);
@@ -122,8 +124,6 @@
 		</script>
 	</body>
 </html>
-
-
 
 
 

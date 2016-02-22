@@ -27,40 +27,46 @@ app.get('transfer.html', function(req, res){
 	res.sendFile(__dirname + '/transfer.html');
 });
 
-//XHR polling doesnt seem to work with heroku :|
-//io.set('transports', ['xhr-polling']);
-
 // Transmission stuff -------------------------------
 
 var Transmission = require('transmission');
 var transmission = new Transmission({
 	port: 9091,
-	host: '127.0.0.1',
+	host: '52.90.33.177',
 	username: 'rambo',
 	password: 'qwerty'
 });
 
-function getStats(){
-	transmission.sessionStats(function(err, result){
-	if(err){
-		console.log(err);
-	} else {
-		console.log(result);
-	}
+// getTorrents();
+
+function getTorrents(){
+	getAllActiveTorrents(function(res){
+		console.log(res);
 	});
 }
 
-function getAllActiveTorrents(){
+function getAllActiveTorrents(caller){
 	transmission.active(function(err, result){
-	if (err){
-		console.log(err);
-	}
-	else {
-		for (var i=0; i< result.torrents.length; i++){
-			console.log(result.torrents[i].id);
-			console.log(result.torrents[i].name);
+		if (err){
+			console.log(err);
 		}
-	}
+		else {
+			var arr=[];
+
+			for (var i=0; i< result.torrents.length; i++){
+				var data = {
+					id : result.torrents[i].id,
+					name : result.torrents[i].name,
+					val : result.torrents[i].percentDone*100,
+					down : result.torrents[i].rateDownload/1000,
+					up : result.torrents[i].rateUpload/1000,
+					eta : result.torrents[i].eta/3600 >>> 0,			//TODO : better time management
+					status : getStatusType(result.torrents[i].status)
+				};
+				arr.push(data);
+			}
+			caller(JSON.stringify(arr));
+		}
 	});
 }
 
@@ -71,26 +77,11 @@ function addTorrent(url){
 	    if (err) {
 	        return console.log(err);
 	    }
-	    var id = result.id;
-	    console.log('Just added a new torrent.');
-	    console.log('Torrent ID: ' + id);
 	});
 }
 
-function getTorrentDetails(id) {
-    transmission.get(id, function(err, result) {
-        if (err) {
-            throw err;
-        }
-        if(result.torrents.length > 0){
-        	console.log("Name = "+ result.torrents[0].name);
-        	console.log("Download Rate = "+ result.torrents[0].rateDownload/1000);
-        	console.log("Upload Rate = "+ result.torrents[0].rateUpload/1000);
-        	console.log("Completed = "+ result.torrents[0].percentDone*100);
-        	console.log("ETA = "+ result.torrents[0].eta/3600);
-        	console.log("Status = "+ getStatusType(result.torrents[0].status));
-        }
-    });
+function startTorrent(id){
+	transmission.start(id, function(err, result){});
 }
 
 function stopTorrent(id){
@@ -110,48 +101,41 @@ function removeTorrent(id) {
 
 //Socket.io listners
 io.sockets.on('connection', function(socket){
+
+	var timeoutId;
+
 	console.log('a user connected');
 	socket.on('disconnect',function(){
 		console.log('a user disconnected');
+		clearInterval(timeoutId);
 	});
 
 	socket.on('addLink', function(link){
-		console.log(link);
+		addTorrent(link);
 	});
-
-	// socket.on('chat message',function(msg){
-	// 	console.log('message: '+msg);
-	// 	io.emit('chat message',msg);
-	// });
 
 	socket.on('getTransferList', function(msg){
-		i=96;
-		var timeoutId = setInterval(function(){
-			if(i>100){
-				clearInterval(timeoutId);
-			} else {
-				var data = {
-					name : 'test',
-					val : i,
-					id : 123,
-					down : i,
-					up : i,
-					status : 'Downloading',
-					eta : (100-i)+' hr'
-				};
-				i++;
-
-				socket.emit('transferList',JSON.stringify(data));
-			}
-		},1000);
+		timeoutId = setInterval(function(){
+			getAllActiveTorrents(function(res){
+				//console.log(res);
+				socket.emit('transferList',res);
+			});
+		}, 1000);
 	});
+
+	socket.on('start',function(id){
+		startTorrent(id);
+	});
+
+	socket.on('pause',function(id){
+		stopTorrent(id);
+	});
+
+	socket.on('delete',function(id){
+		removeTorrent(id);
+	});
+
 });
-
-
-
-
-
-
 
 function getStatusType(type){
 	if(type === 0){
