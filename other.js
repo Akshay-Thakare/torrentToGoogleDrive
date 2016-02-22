@@ -15,11 +15,11 @@ for(var i=0;i<10;i++){
 // Get details of all torrents
 function getStats(){
 	transmission.sessionStats(function(err, result){
-	if(err){
-		console.log(err);
-	} else {
-		console.log(result);
-	}
+		if(err){
+			console.log(err);
+		} else {
+			console.log(result);
+		}
 	});
 }
 

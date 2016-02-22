@@ -1,33 +1,27 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Akshay Thakare. All rights reserved.
+ *  Licensed under the MIT License. See license.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 'use strict';
 
-//Set up express framework
+// Initializations ----------------------------------------------------------------------------------------------
+
 var app = require('express')();
-
-//Set port given by heroku else set default port 3000
 app.set('port', (process.env.PORT || 3000));
-
-//Create http server - express 4 no longer supports 
-//server creation
 var http = require('http').createServer(app);
 
-//Set http server to listen on this port
 http.listen(app.get('port'), function(){
 	console.log('listening on *:' + app.get('port'));
 });
 
-//Attach socket.io to the http server
 var io = require('socket.io')(http);
 
-//Set default get path / home path
 app.get('/', function(req, res){
 	res.sendFile(__dirname + '/index.html');
 });
 
-app.get('transfer.html', function(req, res){
-	res.sendFile(__dirname + '/transfer.html');
-});
-
-// Transmission stuff -------------------------------
+// Transmission stuff ----------------------------------------------------------------------------------------------
 
 var Transmission = require('transmission');
 var transmission = new Transmission({
@@ -68,9 +62,9 @@ function getAllActiveTorrents(caller){
 				var data = {
 					id : result.torrents[i].id,
 					name : result.torrents[i].name,
-					val : result.torrents[i].percentDone*100,
-					down : result.torrents[i].rateDownload/1000,
-					up : result.torrents[i].rateUpload/1000,
+					val : result.torrents[i].percentDone*100 >>> 0,
+					down : result.torrents[i].rateDownload/1000 >>> 0,
+					up : result.torrents[i].rateUpload/1000 >>> 0,
 					eta : result.torrents[i].eta/3600 >>> 0,			//TODO : better time management
 					status : getStatusType(result.torrents[i].status)
 				};
@@ -84,11 +78,7 @@ function getAllActiveTorrents(caller){
 function addTorrent(url){
 	transmission.addUrl(url, {
 	    "download-dir" : "~/transmission/torrents"
-	}, function(err, result) {
-	    if (err) {
-	        return console.log(err);
-	    }
-	});
+	}, function(err, result) {if (err) {console.log(err);}});
 }
 
 function startTorrent(id){
@@ -100,17 +90,31 @@ function stopTorrent(id){
 }
 
 function removeTorrent(id) {
-    transmission.remove(id, function(err) {
-        if (err) {
-            throw err;
-        }
-        console.log('torrent was removed');
-    });
+    transmission.remove(id, function(err) {if (err) {throw err;}});
 }
 
-// End Transmission stuff -------------------------------
+function getStatusType(type){
+	if(type === 0){
+		return 'STOPPED';
+	} else if(type === 1){
+		return 'CHECK_WAIT';
+	} else if(type === 2){
+		return 'CHECK';
+	} else if(type === 3){
+		return 'DOWNLOAD_WAIT';
+	} else if(type === 4){
+		return 'DOWNLOAD';
+	} else if(type === 5){
+		return 'SEED_WAIT';
+	} else if(type === 6){
+		return 'SEED';
+	} else if(type === 7){
+		return 'ISOLATED';
+	}
+}
 
-//Socket.io listners
+//Socket.io listners ----------------------------------------------------------------------------------------------
+
 io.sockets.on('connection', function(socket){
 
 	var timeoutId;
@@ -149,22 +153,58 @@ io.sockets.on('connection', function(socket){
 
 });
 
-function getStatusType(type){
-	if(type === 0){
-		return 'STOPPED';
-	} else if(type === 1){
-		return 'CHECK_WAIT';
-	} else if(type === 2){
-		return 'CHECK';
-	} else if(type === 3){
-		return 'DOWNLOAD_WAIT';
-	} else if(type === 4){
-		return 'DOWNLOAD';
-	} else if(type === 5){
-		return 'SEED_WAIT';
-	} else if(type === 6){
-		return 'SEED';
-	} else if(type === 7){
-		return 'ISOLATED';
-	}
+// File reader stuff ----------------------------------------------------------------------------------------------
+
+var fs = require('fs');
+var untildify = require('untildify');
+
+var path = untildify("~/temp");
+
+function listCompletedDownloads(){
+	fs.readdir(path, function(err, items) {
+		if(err)
+			console.log(err);
+	 	else{
+	    	for (var i=0; i<items.length; i++) {
+	        	console.log(items[i]);
+	    	}
+		}
+	});
 }
+
+
+
+
+
+
+
+
+
+
+
+// Google drive stuff ----------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
