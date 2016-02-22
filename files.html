@@ -1,0 +1,111 @@
+<!-- 
+ *  Copyright (c) Akshay Thakare. All rights reserved.
+ *  Licensed under the MIT License. See license.txt in the project root for license information.
+ -->
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+    	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    	<meta http-equiv="x-ua-compatible" content="ie=edge">
+
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+		<!-- Latest compiled and minified jQuery -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+		<!-- Socket IO lib -->
+		<script src="/socket.io/socket.io.js"></script>
+	</head>
+	<body style="padding-top: 70px;">
+
+		<nav class="navbar navbar-default navbar-fixed-top">
+  			<div class="container-fluid">
+			    
+			    <!-- Brand and toggle get grouped for better mobile display -->
+			    <div class="navbar-header">
+		      		<a class="navbar-brand" href="#">
+		      			<img alt="Brand" src="https://raw.githubusercontent.com/udacity/Sunshine-Version-2/sunshine_master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" height="40px" width="40px" style="margin-top: -10px;" />
+		      		</a>
+			    </div>
+
+    			<!-- Collect the nav links, forms, and other content for toggling -->
+    			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      				<ul class="nav navbar-nav">
+        				<li class=""><a href="/">Transfers</a></li>
+      				</ul>
+      				<ul class="nav navbar-nav">
+        				<li class="active"><a href="#">Files</a></li>
+      				</ul>
+    			</div><!-- /.navbar-collapse -->
+  			</div><!-- /.container-fluid -->
+		</nav>
+
+		<div class="container-fluid">
+			<!-- Breadcrumbs -->
+			<ol class="breadcrumb">
+				<li class="active">/</li>
+			</ol>
+
+			<!-- Files -->
+			<div id="fileHolder" class="list-group">
+				<!-- <button type="button" class="list-group-item">Cras justo odio</button>
+				<button type="button" class="list-group-item">Dapibus ac facilisis in</button>
+				<button type="button" class="list-group-item">Morbi leo risus</button>
+				<button type="button" class="list-group-item">Porta ac consectetur ac</button>
+				<button type="button" class="list-group-item">Vestibulum at eros</button> -->
+			</div>
+			
+		</div>
+
+		<!-- Main function which controls everything -->
+		<script type="text/javascript">
+			var socket = io();
+
+			socket.emit('getFiles','/');
+
+			socket.on('takeFiles', function(msg){
+				// console.log(msg);
+				var data = JSON.parse(msg);
+				for(var i=0;i<data.length;i++){
+					if(data[i].indexOf(".part") > -1){
+						// In case of part files, no download option only delete
+						$('#fileHolder').append("<button type=\"button\" class=\"list-group-item\">"+data[i]+"</button>");
+					} else {
+						// Download and delete option
+					}
+				}
+			});
+
+		</script>
+	</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

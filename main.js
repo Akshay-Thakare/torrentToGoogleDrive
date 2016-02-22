@@ -21,6 +21,10 @@ app.get('/', function(req, res){
 	res.sendFile(__dirname + '/index.html');
 });
 
+app.get('/files.html', function(req, res){
+	res.sendFile(__dirname + '/files.html');
+});
+
 // Transmission stuff ----------------------------------------------------------------------------------------------
 
 var Transmission = require('transmission');
@@ -151,6 +155,12 @@ io.sockets.on('connection', function(socket){
 		removeTorrent(id);
 	});
 
+	socket.on('getFiles',function(path){
+		listCompletedDownloads(path, function(res){
+			socket.emit('takeFiles',res);
+		});
+	});
+
 });
 
 // File reader stuff ----------------------------------------------------------------------------------------------
@@ -158,16 +168,20 @@ io.sockets.on('connection', function(socket){
 var fs = require('fs');
 var untildify = require('untildify');
 
-var path = untildify("~/temp");
-
-function listCompletedDownloads(){
+function listCompletedDownloads(path, caller){
+	var path = untildify("~/temp/incomplete");
 	fs.readdir(path, function(err, items) {
 		if(err)
 			console.log(err);
 	 	else{
+	 		var arr=[];
 	    	for (var i=0; i<items.length; i++) {
-	        	console.log(items[i]);
+	    		if(items[i].charAt(0) != '.'){
+    				// console.log(items[i]);
+    				arr.push(items[i]);
+	        	}
 	    	}
+	    	caller(JSON.stringify(arr));
 		}
 	});
 }
@@ -184,14 +198,51 @@ function listCompletedDownloads(){
 
 // Google drive stuff ----------------------------------------------------------------------------------------------
 
+var google = require('googleapis');
+var OAuth2Client = google.auth.OAuth2;
 
+const CLIENT_ID = "";
+const CLIENT_SECRET = "";
 
+app.get('/oauthcallback', function(req, res){
+    res.end();
+	console.log(req.query.code);
+	getToken(req.query.code);
+});
 
+const REDIRECT_URL = "http://localhost:8080/oauthcallback";		// FAKE
 
+var oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
 
+// generate a url that asks permissions for Google+ and Google Calendar scopes
+var scopes = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/drive.file'
+];
 
+// var url = oauth2Client.generateAuthUrl({
+//   access_type: 'offline', // 'online' (default) or 'offline' (gets refresh_token)
+//   scope: scopes // If you only need one scope you can pass it as string
+// });
 
+// console.log(url);
 
+function getToken(reqCode){
+    oauth2Client.getToken(reqCode, function(err, tokens){
+        if(err){
+            console.log('getToken method error - '+err);
+        } else {
+            console.log(tokens);
+            oauth2Client.setCredentials(tokens);
+        }
+    });
+}
+
+const token={};
+  
+oauth2Client.setCredentials({
+    access_token: token.access_token
+});
 
 
 
