@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+    	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    	<meta http-equiv="x-ua-compatible" content="ie=edge">
+
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+		<!-- Latest compiled and minified jQuery -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+		<!-- Socket IO lib -->
+		<script src="/socket.io/socket.io.js"></script>
+	</head>
+	<body style="padding-top: 70px;">
+
+		<nav class="navbar navbar-default navbar-fixed-top">
+  			<div class="container-fluid">
+			    
+			    <!-- Brand and toggle get grouped for better mobile display -->
+			    <div class="navbar-header">
+		      		<a class="navbar-brand" href="#">
+		      			<img alt="Brand" src="https://raw.githubusercontent.com/udacity/Sunshine-Version-2/sunshine_master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" height="40px" width="40px" style="margin-top: -10px;" />
+		      		</a>
+			    </div>
+
+    			<!-- Collect the nav links, forms, and other content for toggling -->
+    			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      				<ul class="nav navbar-nav">
+        				<li><a href="#">I made this for fun</a></li>
+      				</ul>
+    			</div><!-- /.navbar-collapse -->
+  			</div><!-- /.container-fluid -->
+		</nav>
+
+		<!-- Accept Link -->
+		<div class="container-fluid">
+			<!-- Add Link -->
+			<div class="panel panel-default">
+				<div class="panel-body">
+					<div class="input-group col-md-10 col-md-offset-1">
+  						<input id="link" type="text" class="form-control" placeholder="Paste Link here" aria-describedby="basic-addon2">
+						<span class="input-group-addon" id="basic-addon2"><button id="add_link" style="background: transparent; border: 0px;">Add Link</button></span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Transfers -->
+			<h4>Transfers</h4>
+			<div id="transferHoldingMaster"><div id="transferHolder"></div></div>
+
+		</div>
+
+		<!-- Main function which controls everything -->
+		<script type="text/javascript">
+			var socket = io();
+
+			$('#add_link').click(function(){
+				socket.emit('addLink', $('#link').val());
+				$('#link').val('');
+			});
+
+			function startTransfer(transferId){
+				console.log(transferId);
+			}
+
+			function pauseTransfer(transferId){
+				console.log(transferId);
+			}
+
+			function deleteTransfer(transferId){
+				console.log(transferId);
+			}
+
+			$(window).load(function(){
+				console.log('yolo');
+				socket.emit('getTransferList', '');
+			});
+
+			socket.on('transferList', function(msg){
+
+				var data = JSON.parse(msg);
+				
+				// console.log(msg);
+
+				// check if transfer already exists
+				if ($('#'+data.id+'_panel').length){
+					updateTransfer(data.id, data.val, data.down, data.up, data.eta, data.status);
+				} else {
+					addTransfer(data.id, data.val, data.name, data.down, data.up, data.eta, data.status);
+				}
+			});
+
+			function addTransfer(id, val, name, down, up, eta, status){
+				$('#transferHolder').append("<div id='"+id+'_panel'+"' class=\"panel panel-default\"><div class=\"panel-heading\"><h3 id='"+id+'_name'+"' class=\"panel-title\">"+name+"</h3></div><div class=\"panel-body\"><div class=\"progress\"><div id='"+id+'_progress'+"' class=\"progress-bar progress-bar-info\" role=\"progressbar\" aria-valuenow=\"2\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"min-width: 2em; width: "+val+"%;\">"+val+"%</div></div><div><div class=\"table-responsive\"><table class=\"table\"><tr><th>Download Speed</th><th>Upload Speed</th><th>ETA</th><th>Status</th><th>Controls</th></tr><tr><td id='"+id+'_down'+"' >"+down+" kB/s</td><td id='"+id+'_up'+"'>"+up+" kB/s</td><td id='"+id+'_eta'+"'>"+eta+"</td><td id='"+id+'_status'+"'>"+status+"</td><td><div class=\"btn-group\" data='"+id+"' role=\"group\" aria-label=\"...\"><button id=\"startTransfer\" onclick=\"startTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\" style=\"color: #009688;\"></span></button><button id=\"pauseTransfer\" onclick=\"pauseTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-pause\" aria-hidden=\"true\" style=\"color: #607D8B;\"></span></button><button id=\"deleteTransfer\" onclick=\"deleteTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></div></td></tr></table></div></div></div></div>");
+			}
+
+			function updateTransfer(id, val, down, up, eta, status){
+				$('#'+id+'_down').text(down + " kB/s");
+				$('#'+id+'_up').text(up + " kB/s");
+				$('#'+id+'_eta').text(eta);
+				if(val === 100){
+					$('#'+id+'_down').text("- kB/s");
+					$('#'+id+'_up').text("- kB/s");
+					$('#'+id+'_eta').text("-");
+					$('#'+id+'_status').text("Completed");
+
+					//TODO : Stop torrent
+
+				} else {
+					$('#'+id+'_status').text(status);
+				}
+				$('#'+id+'_progress').text(val+"%");
+				$('#'+id+'_progress').attr('style','width : '+val+'%');
+			}
+
+		</script>
+	</body>
+</html>
+
+
+
+
+
+
