@@ -186,8 +186,21 @@ function listCompletedDownloads(path, caller){
 	});
 }
 
-
-
+// Reading file binary
+function readBinary(path){
+var fstatus = fs.statSync(PNG_FILE);
+	fs.open(PNG_FILE, 'r', function(status, fileDescripter) {
+		if (status) {
+			callback(status.message);
+			return;
+		}
+		
+		var buffer = new Buffer(fstatus.size);
+		fs.read(fileDescripter, buffer, 0, fstatus.size, 0, function(err, num) {
+			console.log(buffer);
+		});
+	});
+}
 
 
 
@@ -199,10 +212,13 @@ function listCompletedDownloads(path, caller){
 // Google drive stuff ----------------------------------------------------------------------------------------------
 
 var google = require('googleapis');
+var async = require('async');
+var request = require('request');
 var OAuth2Client = google.auth.OAuth2;
 
 const CLIENT_ID = "";
 const CLIENT_SECRET = "";
+const REFRESH_TOKEN =  "";
 
 app.get('/oauthcallback', function(req, res){
     res.end();
