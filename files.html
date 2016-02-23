@@ -48,36 +48,78 @@
 
 		<div class="container-fluid">
 			<!-- Breadcrumbs -->
-			<ol class="breadcrumb">
-				<li class="active">/</li>
-			</ol>
+			<div id="breadcrumbMaster">
+				<ol id="bread" class="breadcrumb">
+					<li id="ro_ot" class="active">root</li>
+				</ol>
+			</div>
 
 			<!-- Files -->
-			<div id="fileHolder" class="list-group">
-				<!-- <button type="button" class="list-group-item">Cras justo odio</button>
-				<button type="button" class="list-group-item">Dapibus ac facilisis in</button>
-				<button type="button" class="list-group-item">Morbi leo risus</button>
-				<button type="button" class="list-group-item">Porta ac consectetur ac</button>
-				<button type="button" class="list-group-item">Vestibulum at eros</button> -->
-			</div>
+			<div id="masterFileHolder"><ul id="fileHolder" class="list-group"></ul></div>
 			
 		</div>
 
 		<!-- Main function which controls everything -->
 		<script type="text/javascript">
 			var socket = io();
+			var bid=1;
+			var currentPath="/";
+
+			function navigateFolder(folder){
+				currentPath+=folder;
+				//Update breadcrumbs
+				$('#ro_ot').removeClass("active");
+				$('#bread').append("<li id='"+bid+"_bread' class=\"active\">"+folder+"</li>");
+				bid=bid+1;
+
+				$('#fileHolder').remove();
+				$('#masterFileHolder').append("<ul id=\"fileHolder\" class=\"list-group\"></ul>");
+				socket.emit('getFiles','/'+folder);
+			}
+
+			function downloadFile(file){
+				console.log(file);
+			}
+
+			function deleteFile(file){
+				console.log(file);
+			}
+
+			function back(){
+				bid=bid-1;
+				$('#'+bid+'_bread').remove();
+				bid=bid-1;
+				$('#'+bid+'_bread').addClass("active");
+				$('#fileHolder').remove();
+				$('#masterFileHolder').append("<ul id=\"fileHolder\" class=\"list-group\"></ul>");
+				//Get current path substring
+				currentPath = currentPath.substr(0,currentPath.lastIndexOf("/"));
+				console.log(currentPath);
+				socket.emit('getFiles',currentPath);
+			}
 
 			socket.emit('getFiles','/');
 
 			socket.on('takeFiles', function(msg){
 				// console.log(msg);
 				var data = JSON.parse(msg);
+				//Back
+				if(currentPath.length > 2){
+					$('#fileHolder').append("<li class=\"list-group-item\"><a onclick=\"back();\">..</a></li>");
+				}
 				for(var i=0;i<data.length;i++){
 					if(data[i].indexOf(".part") > -1){
 						// In case of part files, no download option only delete
-						$('#fileHolder').append("<button type=\"button\" class=\"list-group-item\">"+data[i]+"</button>");
+						$('#fileHolder').append("<li class=\"list-group-item\">"+data[i]+"</li>");
 					} else {
 						// Download and delete option
+						if(data[i].indexOf(".") > -1){
+							//This is a file, delete and upload option.
+							$('#fileHolder').append("<li class=\"list-group-item\"><a style=\"color:green;\">"+data[i]+"</a> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+data[i]+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-right:10px; margin-top:-5px; border:0px; \" onclick=\"downloadFile('"+data[i]+"');\" ><span class=\"glyphicon glyphicon-download-alt\" aria-hidden=\"true\" style=\"float:right; color: #009688;\"></span></button> </li>");
+						} else {
+							// This is a folder only delete option
+							$('#fileHolder').append("<li class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a><button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+data[i]+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></li>");
+						}
 					}
 				}
 			});
@@ -85,27 +127,3 @@
 		</script>
 	</body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

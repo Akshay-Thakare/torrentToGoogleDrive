@@ -30,7 +30,7 @@ app.get('/files.html', function(req, res){
 var Transmission = require('transmission');
 var transmission = new Transmission({
 	port: 9091,
-	host: '52.90.33.177',
+	host: '54.210.4.57',
 	username: 'rambo',
 	password: 'qwerty'
 });
@@ -169,7 +169,7 @@ var fs = require('fs');
 var untildify = require('untildify');
 
 function listCompletedDownloads(path, caller){
-	var path = untildify("~/temp/incomplete");
+	var path = untildify("~/temp/incomplete"+path);
 	fs.readdir(path, function(err, items) {
 		if(err)
 			console.log(err);
@@ -181,44 +181,21 @@ function listCompletedDownloads(path, caller){
     				arr.push(items[i]);
 	        	}
 	    	}
+	    	console.log(JSON.stringify(arr));
 	    	caller(JSON.stringify(arr));
 		}
 	});
 }
 
-// Reading file binary
-function readBinary(path){
-var fstatus = fs.statSync(PNG_FILE);
-	fs.open(PNG_FILE, 'r', function(status, fileDescripter) {
-		if (status) {
-			callback(status.message);
-			return;
-		}
-		
-		var buffer = new Buffer(fstatus.size);
-		fs.read(fileDescripter, buffer, 0, fstatus.size, 0, function(err, num) {
-			console.log(buffer);
-		});
-	});
-}
-
-
-
-
-
-
-
-
 // Google drive stuff ----------------------------------------------------------------------------------------------
 
 var google = require('googleapis');
-var async = require('async');
-var request = require('request');
 var OAuth2Client = google.auth.OAuth2;
 
 const CLIENT_ID = "";
 const CLIENT_SECRET = "";
-const REFRESH_TOKEN =  "";
+
+var token;
 
 app.get('/oauthcallback', function(req, res){
     res.end();
@@ -226,22 +203,24 @@ app.get('/oauthcallback', function(req, res){
 	getToken(req.query.code);
 });
 
-const REDIRECT_URL = "http://localhost:8080/oauthcallback";		// FAKE
+app.get('/begin', function(req, res){
+	var url = oauth2Client.generateAuthUrl({
+		access_type: 'offline', // 'online' (default) or 'offline' (gets refresh_token)
+		scope: scopes // If you only need one scope you can pass it as string
+	});
+	
+	// console.log(url);
+	res.redirect(url);
+});
+
+const REDIRECT_URL = "https://ttgd-akshay-thakare.c9users.io:8080/oauthcallback";		// FAKE
 
 var oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
 
 // generate a url that asks permissions for Google+ and Google Calendar scopes
 var scopes = [
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/drive'
 ];
-
-// var url = oauth2Client.generateAuthUrl({
-//   access_type: 'offline', // 'online' (default) or 'offline' (gets refresh_token)
-//   scope: scopes // If you only need one scope you can pass it as string
-// });
-
-// console.log(url);
 
 function getToken(reqCode){
     oauth2Client.getToken(reqCode, function(err, tokens){
@@ -250,15 +229,33 @@ function getToken(reqCode){
         } else {
             console.log(tokens);
             oauth2Client.setCredentials(tokens);
+            uploadFile2();
         }
     });
 }
 
-const token={};
-  
-oauth2Client.setCredentials({
-    access_token: token.access_token
-});
+// application/octet-stream
+function uploadFile2(){
+	var path = untildify("~/workspace/incomplete/aw.jpg");
+	var drive = google.drive('v2');
+	
+	var req = drive.files.insert({
+		resource: {
+			title: 'aw.jpg'
+		},
+		media: {
+			body: fs.createReadStream(path)
+		},
+		auth: oauth2Client
+	}, function(err, response) {
+		if (err)
+			console.log(err);
+		// else
+		// 	console.log(response);
+	});
+	
+	console.log(req._events.complete);
+}
 
 function listGoogleFiles(){
     var service = google.drive('v3');
@@ -285,17 +282,4 @@ function listGoogleFiles(){
         }
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
