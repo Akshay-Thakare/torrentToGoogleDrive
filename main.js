@@ -260,7 +260,31 @@ oauth2Client.setCredentials({
     access_token: token.access_token
 });
 
-
+function listGoogleFiles(){
+    var service = google.drive('v3');
+    service.files.list({
+        auth: oauth2Client,
+        pageSize: 10,
+        fields: "nextPageToken, files(id, name)"
+    }, function(err, response){
+        if(err){
+            console.log("The API returned an error: " + err);
+            return;
+        } else {
+            var files = response.files;
+            if (files.length == 0){
+                console.log("No files found.");
+                return;
+            } else {
+                console.log('Files');
+                for (var i = 0; i < files.length; i++){
+                    var file = files[i];
+                    console.log("%s (%s)", file.name, file.id);
+                }
+            }
+        }
+    });
+}
 
 
 
