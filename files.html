@@ -21,6 +21,15 @@
 
 		<!-- Socket IO lib -->
 		<script src="/socket.io/socket.io.js"></script>
+		
+		<!--Font awesome-->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+		
+		<!--Taffy database-->
+		<script src="/taffy_min.js"></script>
+		
+		<!--Favicon-->
+		<link rel="icon" type="image/png" href="/public/images/favicon.ico">
 	</head>
 	<body style="padding-top: 70px;">
 
@@ -30,18 +39,29 @@
 			    <!-- Brand and toggle get grouped for better mobile display -->
 			    <div class="navbar-header">
 		      		<a class="navbar-brand" href="#">
-		      			<img alt="Brand" src="https://raw.githubusercontent.com/udacity/Sunshine-Version-2/sunshine_master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" height="40px" width="40px" style="margin-top: -10px;" />
+		      			<!--<img alt="Brand" src="https://raw.githubusercontent.com/udacity/Sunshine-Version-2/sunshine_master/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" height="40px" width="40px" style="margin-top: -10px;" />-->
 		      		</a>
 			    </div>
 
     			<!-- Collect the nav links, forms, and other content for toggling -->
     			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       				<ul class="nav navbar-nav">
-        				<li class=""><a href="/">Transfers</a></li>
+        				<li class=""><a href="/home">Transfers</a></li>
       				</ul>
       				<ul class="nav navbar-nav">
-        				<li class="active"><a href="#">Files</a></li>
+        				<li class="active"><a href="/files">Files</a></li>
       				</ul>
+      				<ul class="nav navbar-nav">
+        				<li><a id="diskSpace" href="#">Disk Space</a></li>
+      				</ul>
+      				<ul class="nav navbar-nav navbar-right">
+						<li class="dropdown">
+							<a id="userName" href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a id="userEmail" href="#"></a></li>
+							</ul>
+						</li>
+			      	</ul>
     			</div><!-- /.navbar-collapse -->
   			</div><!-- /.container-fluid -->
 		</nav>
@@ -63,27 +83,79 @@
 		<script type="text/javascript">
 			var socket = io();
 			var bid=1;
-			var currentPath="/";
+			var currentPath="";
+			var currentFileId="";
+			var arr = TAFFY([]);
+			
+			$(window).load(function(){
+				// socket.emit('getTransferList', '');			// for debug only
+				socket.emit('getUserName','');
+				socket.emit('getUserEmail','');
+				socket.emit('getDiskSpace','');
+			});
+			
+			socket.on('sendDiskSpace',function(msg) {
+			    $('#diskSpace').text(msg);
+			});
+			
+			socket.on('sendUserName',function(msg) {
+			    $('#userName').text(msg);
+			});
+			
+			socket.on('sendUserEmail',function(msg) {
+			    $('#userEmail').text(msg);
+			});
 
 			function navigateFolder(folder){
+				currentPath+='/';
 				currentPath+=folder;
 				//Update breadcrumbs
 				$('#ro_ot').removeClass("active");
 				$('#bread').append("<li id='"+bid+"_bread' class=\"active\">"+folder+"</li>");
 				bid=bid+1;
 
+				removeFileHolder(function(){
+					$('#masterFileHolder').append("<ul id=\"fileHolder\" class=\"list-group\"></ul>");
+					socket.emit('getFiles',currentPath);
+				});
+			}
+			
+			function removeFileHolder(callback){
 				$('#fileHolder').remove();
-				$('#masterFileHolder').append("<ul id=\"fileHolder\" class=\"list-group\"></ul>");
-				socket.emit('getFiles','/'+folder);
+				callback();
 			}
 
 			function downloadFile(file){
-				console.log(file);
+				currentFileId = file;
+				socket.emit('emit_file',JSON.stringify({
+					file_name: arr({id:file}).first().name,
+					file_path: currentPath+"/"
+				}));
+
+				// console.log(file);
+				$("#"+file+"_li").remove();
+				$('#fileHolder').append("<li id=\""+file+"_li\" class=\"list-group-item\"><a style=\"color:green;\">"+arr({id:file}).first().name+"</a><i style=\"float:right; margin-top:-5px; marign-left:6px;\" class=\"fa fa-refresh fa-spin fa-2x\"></i></li>");
 			}
 
 			function deleteFile(file){
-				console.log(file);
+				socket.emit('delete_file',JSON.stringify({
+					file_name: arr({id:file}).first().name,
+					file_path: currentPath
+				}));
+				arr({id:file}).remove();
 			}
+			
+			socket.on('fileDeleteDone',function(msg) {
+			    $('#fileHolder').remove();
+				$('#masterFileHolder').append("<ul id=\"fileHolder\" class=\"list-group\"></ul>");
+			    socket.emit('getFiles',currentPath);
+			});
+			
+			socket.on('uploadComplete',function(msg) {
+				//TODO : Show alert
+			    $("#"+currentFileId+"_li").remove();
+			    deleteFile(currentFileId);
+			});
 
 			function back(){
 				bid=bid-1;
@@ -101,6 +173,7 @@
 			socket.emit('getFiles','/');
 
 			socket.on('takeFiles', function(msg){
+				arr = TAFFY([]);
 				// console.log(msg);
 				var data = JSON.parse(msg);
 				//Back
@@ -108,21 +181,32 @@
 					$('#fileHolder').append("<li class=\"list-group-item\"><a onclick=\"back();\">..</a></li>");
 				}
 				for(var i=0;i<data.length;i++){
+					var bid = randomString();
+					arr.insert({id:bid,name:data[i]});
+					// arr.push(JSON.stringify({id:bid,name:data[i]}));
 					if(data[i].indexOf(".part") > -1){
 						// In case of part files, no download option only delete
-						$('#fileHolder').append("<li class=\"list-group-item\">"+data[i]+"</li>");
+						$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\">"+data[i]+"</li>");
 					} else {
 						// Download and delete option
-						if(data[i].indexOf(".") > -1){
+						// if(data[i].indexOf(".") == 1){
 							//This is a file, delete and upload option.
-							$('#fileHolder').append("<li class=\"list-group-item\"><a style=\"color:green;\">"+data[i]+"</a> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+data[i]+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-right:10px; margin-top:-5px; border:0px; \" onclick=\"downloadFile('"+data[i]+"');\" ><span class=\"glyphicon glyphicon-download-alt\" aria-hidden=\"true\" style=\"float:right; color: #009688;\"></span></button> </li>");
-						} else {
-							// This is a folder only delete option
-							$('#fileHolder').append("<li class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a><button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+data[i]+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></li>");
-						}
+							$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+bid+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-right:10px; margin-top:-5px; border:0px; \" onclick=\"downloadFile('"+bid+"');\" ><span class=\"glyphicon glyphicon-download-alt\" aria-hidden=\"true\" style=\"float:right; color: #009688;\"></span></button> </li>");
+						// } else {
+						// 	// This is a folder only delete option
+						// 	$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a><button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+bid+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></li>");
+						// }
 					}
 				}
 			});
+			
+			function randomString() {
+				var length = 6;
+			    var chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			    var result = '';
+			    for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+			    return result;
+			}
 
 		</script>
 	</body>

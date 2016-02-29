@@ -3,12 +3,18 @@
  *  Licensed under the MIT License. See license.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
+// 'use strict';			//Doesnt work in old node
 
 // Initializations ----------------------------------------------------------------------------------------------
 
+var express = require("express");
 var app = require('express')();
-app.set('port', (process.env.PORT || 3000));
+var fs = require('fs');
+var untildify = require('untildify');
+var diskspace = require('diskspace');
+var rimraf = require('rimraf');
+
+app.set('port', (process.env.PORT || 8080));
 var http = require('http').createServer(app);
 
 http.listen(app.get('port'), function(){
@@ -17,12 +23,53 @@ http.listen(app.get('port'), function(){
 
 var io = require('socket.io')(http);
 
+app.use('/public', express.static(__dirname + '/public'));
+
 app.get('/', function(req, res){
-	res.sendFile(__dirname + '/index.html');
+	res.sendFile(__dirname + '/start.html');
 });
 
-app.get('/files.html', function(req, res){
-	res.sendFile(__dirname + '/files.html');
+app.get('/startAuth',function(req, res) {
+    var url = oauth2Client.generateAuthUrl({
+		access_type: 'offline', // 'online' (default) or 'offline' (gets refresh_token)
+		scope: scopes // If you only need one scope you can pass it as string
+	});
+	
+	res.redirect(url);
+});
+
+app.get('/home', function(req, res){
+	if(userEmail == '' || userEmail == null)
+		res.sendFile(__dirname + '/err.html');
+	else
+		res.sendFile(__dirname + '/index.html');
+});
+
+app.get('/oauthcallback', function(req, res){
+    // res.end();
+	// console.log(req.query.code);
+	getToken(req.query.code, function(resp){
+		if(resp == 'err'){
+			res.redirect("https://someurl:8080/err");
+		} else {
+			res.redirect("https://someurl:8080/home");	
+		}
+	});
+});
+
+app.get('/files', function(req, res){
+	if(userEmail == '' || userEmail == null)
+		res.sendFile(__dirname + '/err.html');
+	else
+		res.sendFile(__dirname + '/files.html');
+});
+
+app.get('/err', function(req, res){
+	res.sendFile(__dirname + '/err.html');
+});
+
+app.get('/taffy_min.js', function(req,res){
+	res.sendFile(__dirname + '/taffy_min.js');
 });
 
 // Transmission stuff ----------------------------------------------------------------------------------------------
@@ -30,7 +77,7 @@ app.get('/files.html', function(req, res){
 var Transmission = require('transmission');
 var transmission = new Transmission({
 	port: 9091,
-	host: '54.210.4.57',
+	host: '127.0.0.1',
 	username: 'rambo',
 	password: 'qwerty'
 });
@@ -156,20 +203,67 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('getFiles',function(path){
+		console.log('getFiles : '+path);
 		listCompletedDownloads(path, function(res){
+			// console.log(res);
 			socket.emit('takeFiles',res);
 		});
 	});
-
+	
+	socket.on('emit_file',function(file_details){
+		// console.log(file_details);
+		file_details = JSON.parse(file_details);
+		uploadFile2(file_details.file_path, file_details.file_name, function(){
+			socket.emit('uploadComplete','');
+		});
+	});
+	// TODO : Add disk space available to user
+	
+	socket.on('delete_file',function(file_details){
+		console.log('del file : '+file_details);
+		file_details = JSON.parse(file_details);
+		// fs.unlinkSync();			// Old school
+		// var path = untildify("~"+"/workspace/incomplete"+file_details.file_path+"/"+file_details.file_name);
+		var path = untildify("~"+"/transmission"+file_details.file_path+"/"+file_details.file_name);
+		if(file_details.file_name.indexOf('.') > -1)
+			fs.unlinkSync(path);
+		else 
+			rimraf(path, function(err){
+				console.log(err);			//TODO : Handle errors
+			});
+		socket.emit('fileDeleteDone','file_details');
+	});
+	
+	socket.on('getUserName',function(blank){
+		socket.emit('sendUserName',userName);
+	});
+	
+	socket.on('getUserEmail',function(blank){
+		socket.emit('sendUserEmail',userEmail);
+	});
+	
+	socket.on('getDiskSpace',function(blank) {
+	    diskspace.check('/', function (err, total, free, status)
+		{
+			// console.log((free/1000000000).toFixed(3));
+			var val =  (free/1000000000).toFixed(3);
+			if(val > 1){
+				socket.emit('sendDiskSpace','Disk Space Left: '+val+' Gb');
+			} else {
+				val *= 100;
+				socket.emit('sendDiskSpace','Disk Space Left: '+val+' mb');
+			}
+		});
+		// socket.emit('sendDiskSpace','Disk Space Left: 0 mb');		//TODO : Fix bug
+	});
 });
 
 // File reader stuff ----------------------------------------------------------------------------------------------
 
-var fs = require('fs');
-var untildify = require('untildify');
-
 function listCompletedDownloads(path, caller){
-	var path = untildify("~/temp/incomplete"+path);
+	var path = untildify("~/workspace/incomplete"+path);
+	// var path = untildify("~/transmission"+path);
+	console.log(path);
 	fs.readdir(path, function(err, items) {
 		if(err)
 			console.log(err);
@@ -181,7 +275,7 @@ function listCompletedDownloads(path, caller){
     				arr.push(items[i]);
 	        	}
 	    	}
-	    	console.log(JSON.stringify(arr));
+	    	// console.log(JSON.stringify(arr));
 	    	caller(JSON.stringify(arr));
 		}
 	});
@@ -197,64 +291,74 @@ const CLIENT_SECRET = "";
 
 var token;
 
-app.get('/oauthcallback', function(req, res){
-    res.end();
-	console.log(req.query.code);
-	getToken(req.query.code);
-});
-
-app.get('/begin', function(req, res){
-	var url = oauth2Client.generateAuthUrl({
-		access_type: 'offline', // 'online' (default) or 'offline' (gets refresh_token)
-		scope: scopes // If you only need one scope you can pass it as string
-	});
-	
-	// console.log(url);
-	res.redirect(url);
-});
-
-const REDIRECT_URL = "https://ttgd-akshay-thakare.c9users.io:8080/oauthcallback";		// FAKE
+const REDIRECT_URL = "https://someurl:8080/oauthcallback";
 
 var oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL);
 
 // generate a url that asks permissions for Google+ and Google Calendar scopes
 var scopes = [
-    'https://www.googleapis.com/auth/drive'
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/plus.me',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
-function getToken(reqCode){
+function getToken(reqCode, callback){
     oauth2Client.getToken(reqCode, function(err, tokens){
         if(err){
             console.log('getToken method error - '+err);
         } else {
-            console.log(tokens);
+            // console.log(tokens);
             oauth2Client.setCredentials(tokens);
-            uploadFile2();
+            getProfile(function(resp){
+            	callback(resp);
+            });
         }
     });
 }
 
-// application/octet-stream
-function uploadFile2(){
-	var path = untildify("~/workspace/incomplete/aw.jpg");
+var userName, userEmail;
+function getProfile(callback){
+	var plus = google.plus('v1');
+    plus.people.get({ userId: 'me', auth: oauth2Client }, function(err, response) {
+		// handle err and response
+		if(err){
+			console.log(err);
+			//TODO : Else show error page
+			callback('err');
+		} else {
+			userName = response.displayName;
+			userEmail = response.emails[0].value;
+			callback('suc');
+		}
+	});
+}
+
+function uploadFile2(file_path, file_name, callback){
+	// var path = untildify("~/transmission"+file_path+file_name);
+	// var path = untildify("~/transmission/incomplete/panda.mkv");
+	var path = untildify("~/workspace/incomplete"+file_path+file_name);
 	var drive = google.drive('v2');
-	
+	console.log('start upload');
 	var req = drive.files.insert({
 		resource: {
-			title: 'aw.jpg'
+			title: file_name
 		},
 		media: {
 			body: fs.createReadStream(path)
 		},
 		auth: oauth2Client
-	}, function(err, response) {
-		if (err)
+	}, function(err, response, body) {
+		if (err) {
 			console.log(err);
-		// else
-		// 	console.log(response);
+		} else {
+			console.log('finish upload');
+			callback();
+		 	// console.log(response);
+		}
+		 //console.log(body);
 	});
-	
-	console.log(req._events.complete);
+
 }
 
 function listGoogleFiles(){
@@ -282,4 +386,3 @@ function listGoogleFiles(){
         }
     });
 }
-

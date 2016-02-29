@@ -18,10 +18,12 @@
   "homepage": "https://github.com/Akshay-Thakare/torrentToGoogleDrive#readme",
   "dependencies": {
     "async": "1.5.2",
+    "diskspace": "^1.0.2",
     "express": "4.13.4",
     "fs": "0.0.2",
     "googleapis": "2.1.7",
     "request": "2.69.0",
+    "rimraf": "^2.5.2",
     "socket.io": "1.4.5",
     "transmission": "0.4.3",
     "untildify": "2.1.0"
