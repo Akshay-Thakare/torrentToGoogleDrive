@@ -26,7 +26,7 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
 		
 		<!--Taffy database-->
-		<script src="/taffy_min.js"></script>
+		<script src="/public/js/taffy.min.js"></script>
 		
 		<!--Favicon-->
 		<link rel="icon" type="image/png" href="/public/images/favicon.ico">
@@ -153,6 +153,7 @@
 			
 			socket.on('uploadComplete',function(msg) {
 				//TODO : Show alert
+				console.log('upload complete');
 			    $("#"+currentFileId+"_li").remove();
 			    deleteFile(currentFileId);
 			});
@@ -191,7 +192,7 @@
 						// Download and delete option
 						// if(data[i].indexOf(".") == 1){
 							//This is a file, delete and upload option.
-							$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+bid+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-right:10px; margin-top:-5px; border:0px; \" onclick=\"downloadFile('"+bid+"');\" ><span class=\"glyphicon glyphicon-download-alt\" aria-hidden=\"true\" style=\"float:right; color: #009688;\"></span></button> </li>");
+							$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+bid+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button> <button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-right:10px; margin-top:-5px; border:0px; \" onclick=\"downloadFile('"+bid+"');\" ><span class=\"glyphicon glyphicon-cloud-upload\" aria-hidden=\"true\" style=\"float:right; color: #009688;\"></span></button> </li>");
 						// } else {
 						// 	// This is a folder only delete option
 						// 	$('#fileHolder').append("<li id=\""+bid+"_li\" class=\"list-group-item\"><a onclick=\"navigateFolder('"+data[i]+"');\">"+data[i]+"</a><button type=\"button\" class=\"btn btn-default\" style=\"float:right; margin-top:-5px; height:28px; border:0px;\" onclick=\"deleteFile('"+bid+"');\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></li>");

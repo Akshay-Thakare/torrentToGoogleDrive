@@ -1,6 +1,6 @@
 {
   "name": "ttgd",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "no comments. if u know how to use it then use it.",
   "main": "main.js",
   "scripts": {
@@ -22,6 +22,8 @@
     "express": "4.13.4",
     "fs": "0.0.2",
     "googleapis": "2.1.7",
+    "mysql": "^2.10.2",
+    "recursive-readdir": "^1.3.0",
     "request": "2.69.0",
     "rimraf": "^2.5.2",
     "socket.io": "1.4.5",

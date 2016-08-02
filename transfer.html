@@ -84,31 +84,26 @@
 		<!-- Main function which controls everything -->
 		<script type="text/javascript">
 			var socket = io();
-
-			$('#add_link').click(function(){
-				socket.emit('addLink', $('#link').val());
-				$('#link').val('');
-			});
-
-			function startTransfer(transferId){
-				socket.emit('start',transferId);
-			}
-
-			function pauseTransfer(transferId){
-				socket.emit('pause',transferId);
-			}
-
-			function deleteTransfer(transferId){
-				socket.emit('delete',transferId);
-			}
-
+			
 			$(window).load(function(){
-				console.log('yolo');
-				// socket.emit('getTransferList', '');			// for debug only
+				socket.emit('getTransferList', '');			// for debug only
 				socket.emit('getUserName','');
 				socket.emit('getUserEmail','');
 				socket.emit('getDiskSpace','');
 			});
+
+			$('#add_link').click(function(){
+				console.log($('#link').val());
+				socket.emit('addLink', $('#link').val());
+				$('#link').val('');
+			});
+
+	// TODO : remove delete transfer display bug
+			function deleteTransfer(id, hash){
+				//TODO : Remove transfer from screen
+				$('#'+id+"_panel").remove();
+				socket.emit('delete',JSON.stringify({id:id,hash:hash}));
+			}
 			
 			socket.on('sendDiskSpace',function(msg) {
 			    $('#diskSpace').text(msg);
@@ -125,19 +120,21 @@
 			socket.on('transferList', function(msg){
 
 				var data = JSON.parse(msg);
-				for (var i=0; i< data.length; i++){
-					// check if transfer already exists
-					if ($('#'+data[i].id+'_panel').length){
-						updateTransfer(data[i].id, data[i].name, data[i].val, data[i].down, data[i].up, data[i].eta, data[i].status);
-					} else {
-						addTransfer(data[i].id, data[i].val, data[i].name, data[i].down, data[i].up, data[i].eta, data[i].status);
-					}	
+				if(data != null){
+					for (var i=0; i< data.length; i++){
+						// check if transfer already exists
+						if ($('#'+data[i].id+'_panel').length){
+							updateTransfer(data[i].id, data[i].name, data[i].val, data[i].down, data[i].up, data[i].eta, data[i].status);
+						} else {
+							addTransfer(data[i].id, data[i].val, data[i].name, data[i].down, data[i].up, data[i].eta, data[i].status, data[i].hash);
+						}	
+					}
 				}
 			});
 
 			// TODO : add peer count
-			function addTransfer(id, val, name, down, up, eta, status){
-				$('#transferHolder').append("<div id='"+id+'_panel'+"' class=\"panel panel-default\"><div class=\"panel-heading\"><h3 id='"+id+'_name'+"' class=\"panel-title\">"+name+"</h3></div><div class=\"panel-body\"><div class=\"progress\"><div id='"+id+'_progress'+"' class=\"progress-bar progress-bar-info\" role=\"progressbar\" aria-valuenow=\"2\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"min-width: 2em; width: "+val+"%;\">"+val+"%</div></div><div><div class=\"table-responsive\"><table class=\"table\"><tr><th>Download Speed</th><th>Upload Speed</th><th>ETA</th><th>Status</th><th>Controls</th></tr><tr><td id='"+id+'_down'+"' >"+down+" kB/s</td><td id='"+id+'_up'+"'>"+up+" kB/s</td><td id='"+id+'_eta'+"'>"+eta+"</td><td id='"+id+'_status'+"'>"+status+"</td><td><div class=\"btn-group\" data='"+id+"' role=\"group\" aria-label=\"...\"><button id=\"startTransfer\" onclick=\"startTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-play\" aria-hidden=\"true\" style=\"color: #009688;\"></span></button><button id=\"pauseTransfer\" onclick=\"pauseTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-pause\" aria-hidden=\"true\" style=\"color: #607D8B;\"></span></button><button id=\"deleteTransfer\" onclick=\"deleteTransfer("+id+");\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></div></td></tr></table></div></div></div></div>");
+			function addTransfer(id, val, name, down, up, eta, status, hash){
+				$('#transferHolder').append("<div id='"+id+'_panel'+"' class=\"panel panel-default\"><div class=\"panel-heading\"><h3 id='"+id+'_name'+"' class=\"panel-title\">"+name+"</h3></div><div class=\"panel-body\"><div class=\"progress\"><div id='"+id+'_progress'+"' class=\"progress-bar progress-bar-info\" role=\"progressbar\" aria-valuenow=\"2\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"min-width: 2em; width: "+val+"%;\">"+val+"%</div></div><div><div class=\"table-responsive\"><table class=\"table\"><tr><th>Download Speed</th><th>Upload Speed</th><th>ETA</th><th>Status</th><th>Controls</th></tr><tr><td id='"+id+'_down'+"' >"+down+" kB/s</td><td id='"+id+'_up'+"'>"+up+" kB/s</td><td id='"+id+'_eta'+"'>"+eta+"</td><td id='"+id+'_status'+"'>"+status+"</td><td><div class=\"btn-group\" data='"+id+"' role=\"group\" aria-label=\"...\"><button onclick=\"deleteTransfer("+id+",'"+hash+"');\" type=\"button\" class=\"btn btn-default\"><span class=\"glyphicon glyphicon-trash\" aria-hidden=\"true\" style=\"color: #F44336;\"></span></button></div></td></tr></table></div></div></div></div>");
 			}
 
 			function updateTransfer(id, name, val, down, up, eta, status){
@@ -151,7 +148,7 @@
 					$('#'+id+'_eta').text("-");
 					$('#'+id+'_status').text("Completed");
 
-					deleteTransfer(id);		// On complete remove file from server
+					deleteTransfer(id);		// On complete remove file from server			//TODO : Removed for upgrade
 					$('#'+id+'_panel').remove();
 
 				} else {
